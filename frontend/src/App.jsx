@@ -3,6 +3,8 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import MyPage from './pages/MyPage'
+import MonitorPage from './pages/MonitorPage';
+import InitialSetupPage from './pages/InitialSetupPage';
 
 function App() {
   return (
@@ -18,6 +20,10 @@ function App() {
         boxShadow: '0 0 40px rgba(0,0,0,0.5)'  // 데스크탑에서 볼 때 구분선
       }}>
         <Routes>
+    <Route path="/login" element={<div>로그인 페이지 (준비 중)</div>} />
+        <Route path="/setup" element={<InitialSetupPage />} />
+        <Route path="/monitor" element={<MonitorPage />} />
+        <Route path="/" element={<div>대시보드 (준비 중)</div>} />
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
