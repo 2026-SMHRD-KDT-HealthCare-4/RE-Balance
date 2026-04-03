@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { login, register, socialLogin } from '../api/authApi'
 
 function Login() {
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState(searchParams.get('tab') === 'signup' ? 'signup' : 'login')
   const [scrollDone, setScrollDone] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const [message, setMessage] = useState('')
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
+  const [signupForm, setSignupForm] = useState({ name: '', userid: '', email: '', password: ''});
   const scrollRef = useRef(null)
   const navigate = useNavigate()
 
-  // 스크롤 끝까지 읽었는지 감지 (원래 로직 그대로)
   const handleScroll = () => {
     const el = scrollRef.current
     if (!el) return
@@ -21,21 +24,89 @@ function Login() {
   useEffect(() => {
     setScrollDone(false)
     setAgreed(false)
+    setMessage('')
   }, [tab])
 
-  // 엔터 키 처리를 위한 로그인 함수
-  const handleLoginSubmit = (e) => {
-    e.preventDefault(); // 페이지 새로고침 방지
-    // 실제 서비스 시 여기서 아이디/비번 검증 로직 추가
-    navigate('/home');
-  };
+const handleLoginSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await login({ 
+        login_id: loginForm.email,
+        password: loginForm.password 
+      })
+      
+      localStorage.setItem('token', res.data.token)
+      navigate('/home')
+    } catch (err) {
+      setMessage(err.response?.data?.message || '아이디 또는 비밀번호가 틀렸습니다')
+    }
+  }
+  const handleSignupSubmit = async (e) => {
+  e.preventDefault();
+  if (!agreed) return;
 
-  // 엔터 키 처리를 위한 회원가입 함수
-  const handleSignupSubmit = (e) => {
-    e.preventDefault();
-    if (!agreed) return; // 동의 안 했으면 실행 안 됨
-    navigate('/dashboard');
-  };
+  try {
+    // register 함수를 호출할 때 객체 키값을 확인하세요!
+    await register({ 
+      name: signupForm.name, 
+      login_id: signupForm.userid,
+      email: signupForm.email,
+      password: signupForm.password 
+    });
+
+    setMessage('회원가입 성공! 이제 로그인해 보세요.');
+    setTab('login');
+  } catch (err) {
+    // 현재 여기서 'login_id cannot be null' 에러를 잡아서 보여주고 있는 상태입니다.
+    console.error(err);
+    setMessage(err.response?.data?.message || '회원가입 실패');
+  }
+};
+
+  const handleLogin = async () => {
+  try {
+    const res = await login({ email: '...', password: '...' });
+    console.log('로그인 성공:', res.data);
+    alert('환영합니다!');
+  } catch (err) {
+    console.error('로그인 실패:', err);
+    alert('아이디 또는 비밀번호를 확인해주세요.');
+  }
+};
+
+  // Google 버튼
+const handleGoogleLogin = async () => {
+  try {
+    // 실제로는 Google OAuth SDK에서 받은 정보를 넘김
+    // 지금은 테스트용으로 하드코딩
+    const res = await socialLogin({
+      email: 'test@gmail.com',
+      name: '테스트',
+      provider: 'google',
+      provider_id: 'google_unique_id_123'
+    })
+    localStorage.setItem('token', res.data.token)
+    navigate('/home')
+  } catch (err) {
+    setMessage('구글 로그인 실패')
+  }
+}
+
+// Kakao 버튼
+const handleKakaoLogin = async () => {
+  try {
+    const res = await socialLogin({
+      email: 'test@kakao.com',
+      name: '테스트',
+      provider: 'kakao',
+      provider_id: 'kakao_unique_id_456'
+    })
+    localStorage.setItem('token', res.data.token)
+    navigate('/home')
+  } catch (err) {
+    setMessage('카카오 로그인 실패')
+  }
+}
 
   return (
     <div style={{
@@ -46,7 +117,7 @@ function Login() {
       <div style={{
         background: '#F0EBE3', borderRadius: '20px',
         border: '1px solid #DDD5C8', padding: '2.5rem',
-        width: '100%', maxWidth: '420px' // 가독성을 위해 maxWidth 살짝 고정
+        width: '100%', maxWidth: '420px'
       }}>
         {/* 로고 */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -72,38 +143,94 @@ function Login() {
           ))}
         </div>
 
+        {/* 에러/성공 메시지 */}
+        {message && (
+          <p style={{
+            color: message.includes('성공') ? '#1D9E75' : '#f87171',
+            fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center'
+          }}>
+            {message}
+          </p>
+        )}
+
         {tab === 'login' ? (
-            /* --- 로그인 폼 (form 태그로 엔터 지원) --- */
-            <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input placeholder="아이디" type="text" style={inputStyle} required />
-                <input placeholder="비밀번호" type="password" style={inputStyle} required />
-                <button type="submit" style={primaryBtn}>
-                로그인
-                </button>
+          /* --- 로그인 폼 --- */
+          <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <input
+              placeholder="아이디"
+              type="text"
+              value={loginForm.email}
+              onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+              style={inputStyle}
+              required
+            />
+            <input
+              placeholder="비밀번호"
+              type="password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              style={inputStyle}
+              required
+            />
+            <button type="submit" style={primaryBtn}>
+              로그인
+            </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.5rem 0' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#DDD5C8' }} />
-                  <span style={{ fontSize: '0.8rem', color: '#475569' }}>또는</span>
-                  <div style={{ flex: 1, height: '1px', background: '#DDD5C8' }} />
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.5rem 0' }}>
+              <div style={{ flex: 1, height: '1px', background: '#DDD5C8' }} />
+              <span style={{ fontSize: '0.8rem', color: '#475569' }}>또는</span>
+              <div style={{ flex: 1, height: '1px', background: '#DDD5C8' }} />
+            </div>
 
-                <button type="button" style={googleBtnStyle}>
-                  <GoogleIcon /> Google로 계속하기
-                </button>
-                <button type="button" style={kakaoBtnStyle}>
-                  <KakaoIcon /> 카카오로 계속하기
-                </button>
-            </form>
-            )  : (
-          /* --- 회원가입 폼 (기존 스크롤 로직 유지) --- */
+            <button type="button" onClick={handleGoogleLogin} style={googleBtnStyle}>
+              <GoogleIcon /> Google로 계속하기
+            </button>
+            <button type="button" onClick={handleKakaoLogin} style={kakaoBtnStyle}>
+              <KakaoIcon /> 카카오로 계속하기
+            </button>
+          </form>
+        ) : (
+          /* --- 회원가입 폼 --- */
           <form onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <input placeholder="이름" style={inputStyle} required />
-            <input placeholder="아이디" type="text" style={inputStyle} required />
-            <input placeholder="비밀번호" type="password" style={inputStyle} required />
-            <input placeholder="비밀번호 확인" type="password" style={inputStyle} required />
-            <input placeholder="이메일" type="email" style={inputStyle} required />
+            <input
+              placeholder="이름"
+              value={signupForm.name}
+              onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+              style={inputStyle}
+              required
+            />
+            <input
+              placeholder="아이디"
+              type="text"
+              value={signupForm.userid}
+              onChange={(e) => setSignupForm({ ...signupForm, userid: e.target.value })}
+              style={inputStyle}
+              required
+            />
+            <input
+              placeholder="비밀번호"
+              type="password"
+              value={signupForm.password}
+              onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+              style={inputStyle}
+              required
+            />
+            <input
+              placeholder="비밀번호 확인"
+              type="password"
+              style={inputStyle}
+              required
+            />
+            <input
+              placeholder="이메일"
+              type="email"
+              value={signupForm.email}
+              onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+              style={inputStyle}
+              required
+            />
 
-            {/* 개인정보 동의 - 스크롤 필독 (기존 유지) */}
+            {/* 개인정보 동의 */}
             <div>
               <p style={{ fontSize: '0.85rem', color: '#8C7B6E', marginBottom: '0.5rem' }}>
                 개인정보 처리방침 <span style={{ color: '#f87171' }}>(끝까지 읽어야 동의 가능)</span>
@@ -136,7 +263,6 @@ function Login() {
                 위 내용을 모두 확인하였습니다.
               </div>
 
-              {/* 체크박스 */}
               <label style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                 marginTop: '0.75rem', cursor: scrollDone ? 'pointer' : 'not-allowed',
@@ -170,7 +296,6 @@ function Login() {
   )
 }
 
-/* --- 버튼 및 아이콘 스타일 (기존 유지) --- */
 const googleBtnStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
   background: '#ffffff', color: '#2D2520',
@@ -187,8 +312,8 @@ const kakaoBtnStyle = {
   fontWeight: 600, cursor: 'pointer', width: '100%'
 }
 
-function GoogleIcon() { return <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>; }
-function KakaoIcon() { return <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#191919" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.7 1.6 5.1 4 6.6l-1 3.7 4.3-2.8c.9.2 1.8.3 2.7.3 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg>; }
+function GoogleIcon() { return <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> }
+function KakaoIcon() { return <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#191919" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.7 1.6 5.1 4 6.6l-1 3.7 4.3-2.8c.9.2 1.8.3 2.7.3 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg> }
 
 const inputStyle = {
   background: '#FAF8F5', border: '1px solid #DDD5C8',
