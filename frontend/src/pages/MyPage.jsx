@@ -1,240 +1,195 @@
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { VscGear } from "react-icons/vsc";
+import { TbStretching } from "react-icons/tb";
+import { TbStretching2 } from "react-icons/tb";
+import { FcStatistics } from "react-icons/fc";
+import { FaHome } from "react-icons/fa";
 
-const greetings = [
-  '안녕하세요! 오늘도 바른 자세로 시작해봐요 😊',
-  '좋은 하루 되세요! 목 건강 챙기는 거 잊지 마요 💪',
-  '오늘도 화이팅! 스트레칭 잊지 말아요 🧘',
-  '반가워요! 오늘 자세는 어떤가요? 👀',
-  '오늘도 열심히! 목이 고마워할 거예요 🐢',
-]
-
-const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)]
-const STATUS = 'caution'
+// 1. 아침 랜덤 인삿말 DB
+const GREETINGS = [
+  "좋은 아침이에요, 00님! 기지개 한 번 켜고 시작할까요?",
+  "오늘도 바른 자세와 함께 활기찬 하루 보내세요!",
+  "어제보다 더 곧은 허리를 위하여! 오늘도 화이팅입니다.",
+  "자세가 곧아야 집중력도 올라가는 법! 지금 자세는 어떠신가요?"
+];
 
 const statusConfig = {
-  good: { label: '좋음', color: '#22c55e', bgColor: '#052e16', cva: 52, neckAge: 22, desc: '자세가 매우 좋아요!' },
-  caution: { label: '주의', color: '#f59e0b', bgColor: '#2d1a00', cva: 38, neckAge: 35, desc: '자세에 조금 신경 써보세요' },
-  danger: { label: '위험', color: '#ef4444', bgColor: '#2d0a0a', cva: 22, neckAge: 52, desc: '지금 바로 스트레칭 해주세요!' },
-}
+  good: { color: '#22c55e', label: '바름' },
+  caution: { color: '#f59e0b', label: '주의' },
+  danger: { color: '#ef4444', label: '위험' }
+};
 
-function Character({ status }) {
-  const cfg = statusConfig[status]
-  const faces = {
-    good: (
-      <>
-        <path d="M14 20 Q16 17 18 20" stroke={cfg.color} strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <path d="M26 20 Q28 17 30 20" stroke={cfg.color} strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <path d="M16 28 Q22 34 28 28" stroke={cfg.color} strokeWidth="2" fill="none" strokeLinecap="round"/>
-      </>
-    ),
-    caution: (
-      <>
-        <line x1="14" y1="20" x2="18" y2="20" stroke={cfg.color} strokeWidth="2" strokeLinecap="round"/>
-        <line x1="26" y1="20" x2="30" y2="20" stroke={cfg.color} strokeWidth="2" strokeLinecap="round"/>
-        <line x1="17" y1="30" x2="27" y2="30" stroke={cfg.color} strokeWidth="2" strokeLinecap="round"/>
-      </>
-    ),
-    danger: (
-      <>
-        <path d="M13 18 L17 22 M17 18 L13 22" stroke={cfg.color} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M25 18 L29 22 M29 18 L25 22" stroke={cfg.color} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M16 32 Q22 27 28 32" stroke={cfg.color} strokeWidth="2" fill="none" strokeLinecap="round"/>
-      </>
-    ),
-  }
-  const neckAngles = { good: 0, caution: -12, danger: -25 }
-  const angle = neckAngles[status]
+// 2. 실시간 자세 측정 게이지 컴포넌트
+const RealtimeGauge = ({ value }) => {
+  const getStatus = (angle) => {
+    if (angle >= 50) return statusConfig.good;
+    if (angle >= 30) return statusConfig.caution;
+    return statusConfig.danger;
+  };
+
+  const status = getStatus(value);
+  const barWidth = (Math.min(Math.max(value, 0), 60) / 60) * 100;
 
   return (
-    <svg width="160" height="220" viewBox="0 0 44 80" style={{ filter: `drop-shadow(0 0 20px ${cfg.color}44)` }}>
-      <rect x="12" y="52" width="20" height="22" rx="4" fill="#DDD5C8"/>
-      <g transform={`rotate(${angle}, 22, 52)`}>
-        <rect x="19" y="42" width="6" height="14" rx="3" fill="#475569"/>
-      </g>
-      <g transform={`translate(${angle * 0.3}, 0)`}>
-        <circle cx="22" cy="32" r="14" fill="#F0EBE3" stroke={cfg.color} strokeWidth="1.5"/>
-        {faces[status]}
-      </g>
-      <circle cx="22" cy="32" r="16" fill="none" stroke={cfg.color} strokeWidth="0.5" opacity="0.4"/>
-    </svg>
-  )
-}
-
-function DonutChart({ done, total, color }) {
-  const r = 28
-  const circ = 2 * Math.PI * r
-  const progress = (done / total) * circ
-  return (
-    <svg width="80" height="80" viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r={r} fill="none" stroke="#F0EBE3" strokeWidth="10"/>
-      <circle cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="10"
-        strokeDasharray={`${progress} ${circ}`} strokeLinecap="round"
-        transform="rotate(-90 40 40)" style={{ transition: 'stroke-dasharray 0.6s ease' }}
-      />
-      <text x="40" y="44" textAnchor="middle" fill="#2D2520" fontSize="14" fontWeight="700">
-        {done}/{total}
-      </text>
-    </svg>
-  )
-}
-
-function CVABar({ value, color }) {
-  const pct = Math.min(Math.max(value, 0), 60)
-  const barWidth = (pct / 60) * 100
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-        <span style={{ fontSize: '0.75rem', color: '#8C7B6E' }}>CVA 각도</span>
-        <span style={{ fontSize: '0.85rem', fontWeight: 700, color }}>{value}°</span>
+    <div style={gaugeCardStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#374151' }}>실시간 자세 측정값</h3>
+        <span style={{ fontSize: '0.7rem', color: '#9CA3AF' }}>최근 1시간 기준</span>
       </div>
-      <div style={{ background: '#FAF8F5', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
-        <div style={{ width: `${barWidth}%`, height: '100%', background: color, borderRadius: '999px', transition: 'width 0.8s ease' }}/>
+      <div style={gaugeBgStyle}>
+        <div style={{ ...gaugeFillStyle, width: `${barWidth}%`, background: status.color }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-        <span style={{ fontSize: '0.7rem', color: '#475569' }}>0° 위험</span>
-        <span style={{ fontSize: '0.7rem', color: '#475569' }}>60° 정상</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+        <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>위험 (0°)</span>
+        <strong style={{ fontSize: '1rem', color: status.color }}>현재 {value}° ({status.label})</strong>
+        <span style={{ fontSize: '0.7rem', color: '#9CA3AF' }}>정상 (60°)</span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default function MyPage() {
-  const navigate = useNavigate()
-  const cfg = statusConfig[STATUS]
-  const stretchingDone = 2
-  const stretchingTotal = 4
+  const navigate = useNavigate();
+  const [greeting, setGreeting] = useState("");
+  const currentAngle = 38.4; // 실제 데이터 연결 시 활용
+
+  useEffect(() => {
+    const randomIdx = Math.floor(Math.random() * GREETINGS.length);
+    setGreeting(GREETINGS[randomIdx]);
+  }, []);
+
+  // 로그아웃 로직 정의
+  const handleLogout = () => {
+    // 1. (선택) 로그인 토큰이나 사용자 정보를 지웁니다.
+    localStorage.removeItem('userToken'); 
+    
+    // 2. 알림창 표시
+    alert('로그아웃 되었습니다.');
+
+    // 3. 랜딩 페이지('/')로 이동하며 히스토리를 교체(replace)합니다.
+    navigate('/', { replace: true });
+  };
 
   return (
-    <div style={{ background: '#FAF8F5', minHeight: '100vh', color: '#2D2520', paddingBottom: '5rem' }}>
-
-      {/* 상단 헤더 */}
-      <div style={{
-        padding: '1.25rem 1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid #F0EBE3'
-      }}>
-        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#7C9E87' }}>Re:balance</span>
-        <span style={{
-          background: cfg.bgColor, color: cfg.color,
-          border: `1px solid ${cfg.color}44`,
-          borderRadius: '999px', padding: '0.3rem 0.8rem',
-          fontSize: '0.75rem', fontWeight: 700
-        }}>
-          {cfg.label}
-        </span>
-      </div>
-
-      {/* 캐릭터 영역 */}
-      <div style={{
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', paddingTop: '2rem', gap: '1rem',
-      }}>
-
-        {/* 인사말 */}
-        <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '2rem', color: '#8C7B6E' }}>{randomGreeting}</span>
-        </div>
-
-        {/* 말풍선 두 개 가로 배치 */}
-        <div style={{
-        display: 'flex', gap: '1rem',
-        width: '90%', maxWidth: '400px',
-        justifyContent: 'space-between'
-        }}>
-
-        {/* 말풍선 1 - 목나이 (왼쪽) */}
-        <div style={{
-            background: '#F0EBE3', border: `1px solid ${cfg.color}66`,
-            borderRadius: '16px', padding: '0.6rem 1rem',
-            position: 'relative', animation: 'float 3s ease-in-out infinite',
-            boxShadow: `0 0 20px ${cfg.color}22`, textAlign: 'center', flex: 1
-        }}>
-            <div style={{ fontSize: '0.75rem', color: '#8C7B6E' }}>오늘의 목 나이</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: cfg.color }}>{cfg.neckAge}살</div>
-            <div style={{
-            position: 'absolute', bottom: '-8px', left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0, height: 0,
-            borderLeft: '8px solid transparent',
-            borderRight: '8px solid transparent',
-            borderTop: `8px solid ${cfg.color}66`,
-            }}/>
-        </div>
-
-        {/* 말풍선 2 - 스트레칭 (오른쪽) */}
-        <div style={{
-            background: '#F0EBE3', border: `1px solid ${cfg.color}66`,
-            borderRadius: '16px', padding: '0.6rem 1rem',
-            position: 'relative', animation: 'float 3.5s ease-in-out infinite',
-            boxShadow: `0 0 20px ${cfg.color}22`, textAlign: 'center', flex: 1
-        }}>
-            <div style={{ fontSize: '0.75rem', color: '#8C7B6E' }}>오늘의 스트레칭</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: cfg.color }}>{stretchingDone}/{stretchingTotal}회</div>
-            <div style={{
-            position: 'absolute', bottom: '-8px', left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0, height: 0,
-            borderLeft: '8px solid transparent',
-            borderRight: '8px solid transparent',
-            borderTop: `8px solid ${cfg.color}66`,
-            }}/>
-        </div>
-
-        </div>
-        {/* 캐릭터 */}
-        <Character status={STATUS} />
-
-        {/* CVA 카드 */}
-        <div style={{
-          width: '90%', maxWidth: '400px',
-          background: '#F0EBE3', borderRadius: '16px',
-          border: '1px solid #DDD5C8', padding: '1.25rem',
-        }}>
-          <div style={{ fontSize: '0.85rem', color: '#8C7B6E', marginBottom: '1rem' }}>
-            📐 출근 후 
-            
-            
-            측정값
-          </div>
-          <CVABar value={cfg.cva} color={cfg.color} />
-          <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#A89890', textAlign: 'center' }}>
-            CVA 정상 범위: 50° 이상
-          </div>
-        </div>
-
-      </div>
-
-      {/* 하단 버튼 */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%', maxWidth: '520px',
-        background: '#FAF8F5', borderTop: '1px solid #F0EBE3',
-        padding: '1rem 1.5rem',
-        display: 'flex', gap: '0.75rem'
-      }}>
-        <button style={{
-          flex: 1, background: '#7C9E87', color: '#FAF8F5',
-          border: 'none', borderRadius: '12px',
-          padding: '0.85rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer'
-        }}>
-          📷 거북목 측정하기
+    <div style={containerStyle}>
+      {/* 1. 헤더: 로그아웃 버튼 수정 */}
+      <header style={headerStyle}>
+        <h1 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#7C9E87' }}>Re:balance</h1>
+        <button onClick={handleLogout} style={logoutButtonStyle}>
+          로그아웃
         </button>
-        <button onClick={() => navigate('/dashboard')} style={{
-          flex: 1, background: '#F0EBE3', color: '#2D2520',
-          border: '1px solid #DDD5C8', borderRadius: '12px',
-          padding: '0.85rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer'
-        }}>
-          📊 대시보드
+      </header>
+
+      <main style={{ padding: '1.5rem' }}>
+        <p style={greetingTextStyle}>{greeting}</p>
+
+        {/* 2. AI 피드백 */}
+        <section style={aiCardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <h2 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#374151' }}>00님, 오후 3시에 자세가 가장 무너졌어요.</h2>
+          </div>
+          <p style={aiTextStyle}>"집중력이 떨어질 때 고개가 숙여지는 경향이 있으니 주의하세요!"</p>
+        </section>
+
+        {/* 3. 캐릭터 카드 & 실시간 상태 */}
+        <section style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div>
+              <p style={smallLabel}>목 나이</p>
+              <span style={{ fontSize: '1.1rem', fontWeight: '800' }}>28세</span>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={smallLabel}>오늘의 스트레칭</p>
+              <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#7C9E87' }}>4 / 5회</span>
+            </div>
+          </div>
+          <div style={characterPlaceholder}>[캐릭터 위치]</div>
+          
+          {/* 실시간 게이지 통합 */}
+          <RealtimeGauge value={currentAngle} />
+        </section>
+
+        {/* 4. 맞춤 스트레칭 추천 */}
+        <section style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '12px' }}>맞춤 스트레칭 추천</h3>
+          <div style={recommendCard}>
+            <div style={recommendIcon}><TbStretching2 /></div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '4px' }}>승모근 이완 스트레칭</p>
+              <p style={{ fontSize: '0.75rem', color: '#888' }}>굽은 등과 어깨 통증 완화 (3분)</p>
+            </div>
+            <button style={playBtnStyle}>▶</button>
+          </div>
+        </section>
+
+        <div style={{ height: '120px' }} />
+      </main>
+
+      {/* 5. 플로팅 버튼 */}
+      <div style={floatingActionWrapper}>
+        <button onClick={() => navigate('/camera')} style={stickyButtonStyle}>
+          실시간 거북목 측정 시작
         </button>
       </div>
 
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-      `}</style>
+      {/* 6. 하단 메뉴바 */}
+      <footer style={footerStyle}>
+        <div style={navItemStyle}><FaHome /><span style={labelStyle}>HOME</span></div>
+        <div style={navItemStyle}><TbStretching /><span style={labelStyle}>스트레칭</span></div>
+        <div style={navItemStyle}><FcStatistics /><span style={labelStyle}>기록</span></div>        
+        <div style={{...navItemStyle, color: '#070707'}}><VscGear /><span style={labelStyle}>설정</span></div>
+      </footer>
     </div>
-  )
+  );
 }
+
+// --- 스타일 (기존 코드 유지 및 게이지 스타일 추가) ---
+
+const gaugeCardStyle = {
+  marginTop: '20px',
+  padding: '15px',
+  background: '#F9FAFB',
+  borderRadius: '16px',
+};
+
+const gaugeBgStyle = {
+  height: '10px',
+  background: '#E5E7EB',
+  borderRadius: '5px',
+  overflow: 'hidden'
+};
+
+const gaugeFillStyle = {
+  height: '100%',
+  borderRadius: '5px',
+  transition: 'width 0.5s ease-in-out'
+};
+
+const characterPlaceholder = {
+  height: '120px',
+  background: '#F3F4F6',
+  borderRadius: '15px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '10px'
+};
+
+// ... (이외 제공해주신 스타일 객체들과 동일)
+const containerStyle = { background: '#F9FAFB', minHeight: '100vh', maxWidth: '520px', margin: '0 auto', position: 'relative' };
+const headerStyle = { padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' };
+const logoutButtonStyle = { padding: '6px 12px', background: '#F3F4F6', border: 'none', borderRadius: '8px', fontSize: '0.75rem', color: '#6B7280', fontWeight: '600' };
+const greetingTextStyle = { fontSize: '1.1rem', fontWeight: '800', color: '#2D2520', marginBottom: '1.5rem', padding: '0 5px' };
+const aiCardStyle = { background: '#E8F0EA', borderRadius: '20px', padding: '1.2rem', marginBottom: '1.2rem' };
+const aiTextStyle = { fontSize: '0.85rem', color: '#4B5563', margin: 0 };
+const cardStyle = { background: '#fff', borderRadius: '24px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' };
+const smallLabel = { fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '4px' };
+const recommendCard = { display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', padding: '1rem', borderRadius: '20px', border: '1px solid #F3F4F6' };
+const recommendIcon = { width: '45px', height: '45px', background: '#F0F7F2', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const playBtnStyle = { background: '#7C9E87', color: '#fff', border: 'none', width: '30px', height: '30px', borderRadius: '50%' };
+const floatingActionWrapper = { position: 'fixed', bottom: '85px', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '520px', padding: '0 1.5rem', zIndex: 999 };
+const stickyButtonStyle = { width: '100%', padding: '1.1rem', background: '#2D2520', color: '#fff', border: 'none', borderRadius: '20px', fontSize: '1rem', fontWeight: '800' };
+const footerStyle = { position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '520px', background: '#D9D3D0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: '80px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px' };
+const navItemStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 };
+const labelStyle = { fontSize: '0.6rem', fontWeight: '700', marginTop: '4px' };
