@@ -1,18 +1,38 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import MyPage from './pages/MyPage'
 import MonitorPage from './pages/MonitorPage';
 import InitialSetupPage from './pages/InitialSetupPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<div>로그인 페이지 (준비 중)</div>} />
+    <BrowserRouter>
+      {/* 모바일 프레임 */}
+      <div style={{
+        maxWidth: '520px',
+        minHeight: '100vh',
+        margin: '0 auto',
+        background: '#FAF8F5',
+        position: 'relative',
+        overflowX: 'hidden',
+        boxShadow: '0 0 40px rgba(0,0,0,0.5)'  // 데스크탑에서 볼 때 구분선
+      }}>
+        <Routes>
+    <Route path="/login" element={<div>로그인 페이지 (준비 중)</div>} />
         <Route path="/setup" element={<InitialSetupPage />} />
         <Route path="/monitor" element={<MonitorPage />} />
         <Route path="/" element={<div>대시보드 (준비 중)</div>} />
-      </Routes>
-    </Router>
-  );
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/home" element={<MyPage />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
+  )
 }
 
-export default App;
+export default App
