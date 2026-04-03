@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { initializePose, sendToPose } from '../ai/mediapipe';
 import { analyzePosture } from '../ai/posetureAnalyzer'; // 의성님 정면 분석기
-import { calculateCVA } from '../ai/poseAnalyzer';      // 사용자님 CVA 분석기
+import { calculateCVA } from '../ai/posestretch';      // 사용자님 CVA 분석기
 import { savePoseLog } from '../api/poseApi';
 
 export const useUnifiedPose = (videoRef) => {

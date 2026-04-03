@@ -1,95 +1,52 @@
-import React, { useRef, useEffect } from 'react'; // 리액트 기본 도구
-import { useNavigate } from 'react-router-dom'; // 페이지 이동 도구
-import { useUnifiedPose } from '../hooks/useUnifiedPose'; // AI 자세 분석 커스텀 훅 (웹캠 데이터를 분석함)
-import { sendPostureAlert, savePostureScore, loadPostureScore } from '../utils/appUtils'; // 공용 도구함에서 기능들 가져오기
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import StretchPage from './StretchPage'; // 우리가 만든 스트레칭 페이지
+
+// ❌ 의성씨의 훅은 더 이상 사용하지 않습니다.
+// import { useUnifiedPose } from '../hooks/useUnifiedPose'; 
 
 const MonitorPage = () => {
-  // 1. 비디오 엘리먼트를 직접 가리키기 위한 참조 변수 (웹캠 화면 연결용)
+  const [landmarks, setLandmarks] = useState(null); // 실시간 관절 좌표 상태
+  const [isStretchMode, setIsStretchMode] = useState(false); // 스트레칭 모드 전환 여부
   const videoRef = useRef(null);
-  
-  // 2. 페이지 이동 함수 선언
   const navigate = useNavigate();
 
-  // 3. AI 분석 훅 실행: videoRef를 전달하여 실시간으로 각도, 상태(정상/위험) 데이터를 받아옵니다.
-  const { postureData } = useUnifiedPose(videoRef); 
-
-  // 4. [실시간 감시 로직] 자세 상태가 바뀔 때마다 실행됩니다.
+  // --- [핵심] MediaPipe 설정 (의성씨 로직 없이 순수하게 좌표만 추출) ---
   useEffect(() => {
-    // 만약 AI가 판정한 상태가 '위험'이라면?
-    if (postureData.status === '위험') {
-      sendPostureAlert(); // 🔔 서비스 워커를 통해 백그라운드 푸시 알림 발송
-      
-      // 📊 점수 차감: 현재 점수를 불러와서 1점을 뺀 뒤 다시 저장합니다. (최하점은 0점)
-      savePostureScore(Math.max(0, loadPostureScore() - 1));
-    }
-  }, [postureData.status]); // [postureData.status]가 변경될 때만 이 내부 코드가 돌아갑니다.
+    // 여기에 기존에 작성되어 있던 MediaPipe 설정(Pose 객체 생성 등)이 있을 것입니다.
+    // 핵심은 onResults 함수 내부입니다!
+    
+    const onResults = (results) => {
+      if (results.poseLandmarks) {
+        // 1. 순수 좌표 데이터를 상태에 저장합니다.
+        setLandmarks(results.poseLandmarks);
 
-  // 5. [임시 테스트용 함수] 웹캠 없이도 로직이 잘 돌아가는지 확인하기 위한 버튼 클릭 이벤트
-  const handleTest = () => {
-    sendPostureAlert(); // 알림 테스트
-    savePostureScore(Math.max(0, loadPostureScore() - 10)); // 테스트 시엔 10점 크게 감점
-    navigate('/stretch'); // 알림 확인 후 스트레칭 페이지로 잘 넘어가는지 테스트하기 위해 이동
+        // 2. 만약 거북목이 심해서 스트레칭이 필요하다고 판단되면 (기존 로직 활용)
+        // setIsStretchMode(true); 
+      }
+    };
+
+    // ... (MediaPipe Camera 설정 로직들) ...
+  }, []);
+
+  // 스트레칭이 끝났을 때 다시 모니터링으로 돌아오는 함수
+  const handleStretchFinish = () => {
+    setIsStretchMode(false);
+    // 필요시 점수 초기화 등의 로직 추가
   };
 
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      
-      {/* 상단 바: 뒤로가기 버튼, 제목, 테스트 버튼 배치 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <button onClick={() => navigate('/')}>← 대시보드로</button>
-        <h2>정밀 모니터링 중</h2>
-        
-        {/* 강제로 위험 상황을 만드는 빨간색 테스트 버튼 */}
-        <button 
-          onClick={handleTest} 
-          style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer' }}
-        >
-          테스트 알림
-        </button>
-      </div>
+    <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
+      {/* 1. 평소에는 웹캠 화면(모니터링)을 보여줌 */}
+      <video ref={videoRef} style={{ display: isStretchMode ? 'none' : 'block', width: '100%' }} />
 
-      {/* 영상 및 분석 데이터 표시 영역 */}
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        {/* 실제 웹캠 화면이 나오는 비디오 태그 */}
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
-          style={{ 
-            width: '720px', 
-            borderRadius: '15px', 
-            transform: 'scaleX(-1)' // 거울처럼 보이기 위해 좌우 반전
-          }} 
+      {/* 2. 스트레칭 모드가 활성화되면, 우리가 만든 StretchPage를 띄움 */}
+      {isStretchMode && (
+        <StretchPage 
+          landmarks={landmarks} // 🎯 의성씨 훅 거치지 않은 순수 좌표 전달!
+          onFinish={handleStretchFinish} 
         />
-        
-        {/* 영상 위에 겹쳐서 보여주는 분석 정보창 (우측 상단) */}
-        <div style={{ 
-          position: 'absolute', 
-          top: '20px', 
-          right: '20px', 
-          backgroundColor: 'rgba(255,255,255,0.9)', 
-          padding: '15px', 
-          borderRadius: '10px', 
-          textAlign: 'left',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          {/* AI가 계산한 실시간 목 각도 */}
-          <p>📐 목 각도: <strong>{postureData.angle}°</strong></p>
-          
-          {/* 현재 상태 표시 (정상일 땐 초록색, 위험일 땐 빨간색 배경) */}
-          <div style={{ 
-            padding: '10px', 
-            borderRadius: '5px', 
-            textAlign: 'center', 
-            fontWeight: 'bold', 
-            backgroundColor: postureData.status === '위험' ? '#fee2e2' : '#d1fae5',
-            color: postureData.status === '위험' ? '#dc2626' : '#059669' 
-          }}>
-            상태: {postureData.status}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
