@@ -1,17 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // MediaPipe 라이브러리들이 Vite 환경에서 잘 로드되도록 최적화 대상에 포함시킵니다.
-  optimizeDeps: {
-    include: [
-      '@mediapipe/pose',
-      '@mediapipe/camera_utils'
-    ],
+  server: {
+    proxy: {
+      // 브라우저에서 /api로 시작하는 요청을 보내면 http://localhost:8080으로 전달합니다.
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
-  // 빌드 시 commonjs 모듈 처리 관련 에러를 방지하기 위한 설정입니다.
+  optimizeDeps: {
+    include: ['@mediapipe/pose', '@mediapipe/camera_utils'],
+  },
   build: {
     commonjsOptions: {
       include: [/node_modules/],

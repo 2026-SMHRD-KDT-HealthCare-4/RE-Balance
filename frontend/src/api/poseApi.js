@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 백엔드 API 서버의 기본 주소입니다.
-const API_URL = 'http://localhost:5000/api/pose';
+const API_URL = 'http://localhost:8080/api/pose';
 
 /**
  * 분석된 자세 데이터를 서버 DB에 저장하는 함수
