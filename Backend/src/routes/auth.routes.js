@@ -1,8 +1,9 @@
 const express = require('express');
-const router = express.Router(); // router 정의 확인
+const router = express.Router();
 const authController = require('../controllers/auth.controller');
 
 router.post('/login', authController.login); 
 router.post('/register', authController.register);
+router.post('/social', authController.social);
 
 module.exports = router;
