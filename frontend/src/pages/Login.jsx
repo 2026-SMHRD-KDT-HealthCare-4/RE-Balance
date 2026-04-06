@@ -8,8 +8,8 @@ function Login() {
   const [scrollDone, setScrollDone] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [message, setMessage] = useState('')
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-  const [signupForm, setSignupForm] = useState({ name: '', userid: '', email: '', password: ''});
+  const [loginForm, setLoginForm] = useState({ login_id: '', password: '' })
+  const [signupForm, setSignupForm] = useState({ name: '', login_id: '', email: '', password: '' })
   const scrollRef = useRef(null)
   const navigate = useNavigate()
 
@@ -27,86 +27,63 @@ function Login() {
     setMessage('')
   }, [tab])
 
-const handleLoginSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault()
     try {
-      const res = await login({ 
-        login_id: loginForm.email,
-        password: loginForm.password 
-      })
-      
+      const res = await login({ login_id: loginForm.login_id, password: loginForm.password })
       localStorage.setItem('token', res.data.token)
       navigate('/home')
     } catch (err) {
       setMessage(err.response?.data?.message || '아이디 또는 비밀번호가 틀렸습니다')
     }
   }
+
   const handleSignupSubmit = async (e) => {
-  e.preventDefault();
-  if (!agreed) return;
-
-  try {
-    // register 함수를 호출할 때 객체 키값을 확인하세요!
-    await register({ 
-      name: signupForm.name, 
-      login_id: signupForm.userid,
-      email: signupForm.email,
-      password: signupForm.password 
-    });
-
-    setMessage('회원가입 성공! 이제 로그인해 보세요.');
-    setTab('login');
-  } catch (err) {
-    // 현재 여기서 'login_id cannot be null' 에러를 잡아서 보여주고 있는 상태입니다.
-    console.error(err);
-    setMessage(err.response?.data?.message || '회원가입 실패');
+    e.preventDefault()
+    if (!agreed) return
+    try {
+      await register({
+        name: signupForm.name,
+        login_id: signupForm.login_id,
+        email: signupForm.email,
+        password: signupForm.password
+      })
+      setMessage('회원가입 성공! 로그인해주세요.')
+      setTab('login')
+    } catch (err) {
+      setMessage(err.response?.data?.message || '회원가입 중 오류가 발생했습니다')
+    }
   }
-};
 
-  const handleLogin = async () => {
-  try {
-    const res = await login({ email: '...', password: '...' });
-    console.log('로그인 성공:', res.data);
-    alert('환영합니다!');
-  } catch (err) {
-    console.error('로그인 실패:', err);
-    alert('아이디 또는 비밀번호를 확인해주세요.');
+  const handleGoogleLogin = async () => {
+    try {
+      const res = await socialLogin({
+        email: 'test@gmail.com',
+        name: '테스트',
+        provider: 'google',
+        provider_id: 'google_unique_id_123'
+      })
+      localStorage.setItem('token', res.data.token)
+      navigate('/home')
+    } catch (err) {
+      setMessage('구글 로그인 실패')
+    }
   }
-};
 
-  // Google 버튼
-const handleGoogleLogin = async () => {
-  try {
-    // 실제로는 Google OAuth SDK에서 받은 정보를 넘김
-    // 지금은 테스트용으로 하드코딩
-    const res = await socialLogin({
-      email: 'test@gmail.com',
-      name: '테스트',
-      provider: 'google',
-      provider_id: 'google_unique_id_123'
-    })
-    localStorage.setItem('token', res.data.token)
-    navigate('/home')
-  } catch (err) {
-    setMessage('구글 로그인 실패')
+  const handleKakaoLogin = async () => {
+    try {
+      const res = await socialLogin({
+        email: 'test@kakao.com',
+        name: '테스트',
+        provider: 'kakao',
+        provider_id: 'kakao_unique_id_456'
+      })
+      localStorage.setItem('token', res.data.token)
+      navigate('/home')
+    } catch (err) {
+      setMessage('카카오 로그인 실패')
+    }
   }
-}
-
-// Kakao 버튼
-const handleKakaoLogin = async () => {
-  try {
-    const res = await socialLogin({
-      email: 'test@kakao.com',
-      name: '테스트',
-      provider: 'kakao',
-      provider_id: 'kakao_unique_id_456'
-    })
-    localStorage.setItem('token', res.data.token)
-    navigate('/home')
-  } catch (err) {
-    setMessage('카카오 로그인 실패')
-  }
-}
 
   return (
     <div style={{
@@ -159,8 +136,8 @@ const handleKakaoLogin = async () => {
             <input
               placeholder="아이디"
               type="text"
-              value={loginForm.email}
-              onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+              value={loginForm.login_id}
+              onChange={(e) => setLoginForm({ ...loginForm, login_id: e.target.value })}
               style={inputStyle}
               required
             />
@@ -172,9 +149,7 @@ const handleKakaoLogin = async () => {
               style={inputStyle}
               required
             />
-            <button type="submit" style={primaryBtn}>
-              로그인
-            </button>
+            <button type="submit" style={primaryBtn}>로그인</button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.5rem 0' }}>
               <div style={{ flex: 1, height: '1px', background: '#DDD5C8' }} />
@@ -202,8 +177,8 @@ const handleKakaoLogin = async () => {
             <input
               placeholder="아이디"
               type="text"
-              value={signupForm.userid}
-              onChange={(e) => setSignupForm({ ...signupForm, userid: e.target.value })}
+              value={signupForm.login_id}
+              onChange={(e) => setSignupForm({ ...signupForm, login_id: e.target.value })}
               style={inputStyle}
               required
             />
